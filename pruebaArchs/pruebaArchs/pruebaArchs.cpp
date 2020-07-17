@@ -7,11 +7,16 @@
 #include <thread>
 #include <mutex>
 #include <vector>
-#include "xlsstream.h"
+#include "Workbook.h"
+
 
 using namespace csv;
+using namespace SimpleXlsx;
+using namespace std;
 
 std::mutex mu;
+CWorkbook book;
+CWorksheet &sheet = book.AddSheet("New sheet simple");
 
 class dayClass
 {
@@ -54,7 +59,8 @@ std::vector<std::string> split(const std::string &s, char delim) {
 void parseVector(dayClass day)
 {
 	mu.lock();
-	std::cout << "trhead: " << day.day;
+	sheet.AddCell(day.low[0]);
+	sheet.AddCell(day.low[1]);
 	mu.unlock();
 }
 
@@ -63,10 +69,15 @@ int main()
 	std::vector<dayClass> days;
     std::cout << "Hello World!\n"; 
 
-	xlsstream xls("important.xls");
-	xls.select_sheet("Hoja 1");
 
-	xls << "AAA";
+	const int colNum = 20;
+	const int rowNum = 10;
+
+	
+
+// Creating a simple data sheet
+	
+
 
 	CSVFormat format;
 	format.delimiter(',');
@@ -102,6 +113,10 @@ int main()
 		t.join();
 	}
 	std::cout << dayIdx;
+
+	bool bRes = book.Save(("MyBook.xlsx"));
+	if (bRes)   cout << "The book has been saved successfully";
+	else        cout << "The book saving has been failed";
 
 
 

@@ -2,36 +2,4 @@
 c:\users\cassagnes andres\documents\freelance\cuda\kakan\mio\pruebaarchs\pruebaarchs\csv.h(5135): warning C4244: '=': conversión de 'double' a 'size_t'; posible pérdida de datos
 c:\users\cassagnes andres\documents\freelance\cuda\kakan\mio\pruebaarchs\pruebaarchs\csv.h(5662): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
   c:\program files (x86)\windows kits\10\include\10.0.17763.0\ucrt\stdio.h(1774): note: vea la declaración de 'sprintf'
-c:\users\cassagnes andres\documents\freelance\cuda\kakan\mio\pruebaarchs\pruebaarchs\xlserr.h(192): warning C4996: 'strncpy': This function or variable may be unsafe. Consider using strncpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
-  c:\program files (x86)\windows kits\10\include\10.0.17763.0\ucrt\string.h(338): note: vea la declaración de 'strncpy'
-c:\users\cassagnes andres\documents\freelance\cuda\kakan\mio\pruebaarchs\pruebaarchs\xlserr.h(264): warning C4996: 'strncpy': This function or variable may be unsafe. Consider using strncpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
-  c:\program files (x86)\windows kits\10\include\10.0.17763.0\ucrt\string.h(338): note: vea la declaración de 'strncpy'
-c:\users\cassagnes andres\documents\freelance\cuda\kakan\mio\pruebaarchs\pruebaarchs\xlserr.h(272): warning C4996: 'strncpy': This function or variable may be unsafe. Consider using strncpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
-  c:\program files (x86)\windows kits\10\include\10.0.17763.0\ucrt\string.h(338): note: vea la declaración de 'strncpy'
-c:\users\cassagnes andres\documents\freelance\cuda\kakan\mio\pruebaarchs\pruebaarchs\xlserr.h(280): warning C4996: 'strncpy': This function or variable may be unsafe. Consider using strncpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
-  c:\program files (x86)\windows kits\10\include\10.0.17763.0\ucrt\string.h(338): note: vea la declaración de 'strncpy'
-c:\users\cassagnes andres\documents\freelance\cuda\kakan\mio\pruebaarchs\pruebaarchs\xlserr.h(288): warning C4996: 'strncpy': This function or variable may be unsafe. Consider using strncpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
-  c:\program files (x86)\windows kits\10\include\10.0.17763.0\ucrt\string.h(338): note: vea la declaración de 'strncpy'
-c:\users\cassagnes andres\documents\freelance\cuda\kakan\mio\pruebaarchs\pruebaarchs\xlserr.h(296): warning C4996: 'strncpy': This function or variable may be unsafe. Consider using strncpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
-  c:\program files (x86)\windows kits\10\include\10.0.17763.0\ucrt\string.h(338): note: vea la declaración de 'strncpy'
-c:\users\cassagnes andres\documents\freelance\cuda\kakan\mio\pruebaarchs\pruebaarchs\xlserr.h(304): warning C4996: 'strncpy': This function or variable may be unsafe. Consider using strncpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
-  c:\program files (x86)\windows kits\10\include\10.0.17763.0\ucrt\string.h(338): note: vea la declaración de 'strncpy'
-c:\users\cassagnes andres\documents\freelance\cuda\kakan\mio\pruebaarchs\pruebaarchs\xlserr.h(312): warning C4996: 'strncpy': This function or variable may be unsafe. Consider using strncpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
-  c:\program files (x86)\windows kits\10\include\10.0.17763.0\ucrt\string.h(338): note: vea la declaración de 'strncpy'
-c:\users\cassagnes andres\documents\freelance\cuda\kakan\mio\pruebaarchs\pruebaarchs\xlscall.h(40): warning C4091: 'typedef ': se ha omitido a la izquierda de 'xlscall::dir_t' cuando no hay ninguna variable declarada
-c:\users\cassagnes andres\documents\freelance\cuda\kakan\mio\pruebaarchs\pruebaarchs\xlscall.h(48): warning C4091: 'typedef ': se ha omitido a la izquierda de 'xlscall::eof_t' cuando no hay ninguna variable declarada
-c:\users\cassagnes andres\documents\freelance\cuda\kakan\mio\pruebaarchs\pruebaarchs\xlsstream.h(37): warning C4091: 'typedef ': se ha omitido a la izquierda de 'xlsstream::dir_t' cuando no hay ninguna variable declarada
-c:\users\cassagnes andres\documents\freelance\cuda\kakan\mio\pruebaarchs\pruebaarchs\xlsstream.h(46): warning C4091: 'typedef ': se ha omitido a la izquierda de 'xlsstream::eof_t' cuando no hay ninguna variable declarada
-c:\users\cassagnes andres\documents\freelance\cuda\kakan\mio\pruebaarchs\pruebaarchs\xlsstream.h(177): error C4596: 'version': nombre completo no válido en la declaración de miembro
-c:\users\cassagnes andres\documents\freelance\cuda\kakan\mio\pruebaarchs\pruebaarchs\xlsstream.h(812): error C2760: error de sintaxis: token "identificador" donde se esperaba ";"
-  c:\users\cassagnes andres\documents\freelance\cuda\kakan\mio\pruebaarchs\pruebaarchs\xlsstream.h(812): note: Diagnóstico en la función 'void xlsstream::readvec(T &,int,int)' generada por el compilador
-c:\users\cassagnes andres\documents\freelance\cuda\kakan\mio\pruebaarchs\pruebaarchs\xlsstream.h(812): error C7510: "value_type": el uso del nombre tipo dependiente debe tener como prefijo "typename"
-  c:\users\cassagnes andres\documents\freelance\cuda\kakan\mio\pruebaarchs\pruebaarchs\xlsstream.h(812): note: Diagnóstico en la función 'void xlsstream::readvec(T &,int,int)' generada por el compilador
-c:\users\cassagnes andres\documents\freelance\cuda\kakan\mio\pruebaarchs\pruebaarchs\xlsstream.h(852): error C2760: error de sintaxis: token "identificador" donde se esperaba ";"
-  c:\users\cassagnes andres\documents\freelance\cuda\kakan\mio\pruebaarchs\pruebaarchs\xlsstream.h(852): note: Diagnóstico en la función 'void xlsstream::writevec(const T &,int,int)' generada por el compilador
-c:\users\cassagnes andres\documents\freelance\cuda\kakan\mio\pruebaarchs\pruebaarchs\xlsstream.h(920): error C2760: error de sintaxis: token "identificador" donde se esperaba ";"
-  c:\users\cassagnes andres\documents\freelance\cuda\kakan\mio\pruebaarchs\pruebaarchs\xlsstream.h(920): note: Diagnóstico en la función 'void xlsstream::readmat(T &,int,int)' generada por el compilador
-c:\users\cassagnes andres\documents\freelance\cuda\kakan\mio\pruebaarchs\pruebaarchs\xlsstream.h(920): error C7510: "value_type": el uso del nombre tipo dependiente debe tener como prefijo "typename"
-  c:\users\cassagnes andres\documents\freelance\cuda\kakan\mio\pruebaarchs\pruebaarchs\xlsstream.h(920): note: Diagnóstico en la función 'void xlsstream::readmat(T &,int,int)' generada por el compilador
-c:\users\cassagnes andres\documents\freelance\cuda\kakan\mio\pruebaarchs\pruebaarchs\xlsstream.h(992): error C2760: error de sintaxis: token "identificador" donde se esperaba ";"
-  c:\users\cassagnes andres\documents\freelance\cuda\kakan\mio\pruebaarchs\pruebaarchs\xlsstream.h(992): note: Diagnóstico en la función 'void xlsstream::writemat(const T &,int,int)' generada por el compilador
+  pruebaArchs.vcxproj -> C:\Users\Cassagnes Andres\Documents\Freelance\cuda\kakan\mio\pruebaArchs\x64\Debug\pruebaArchs.exe
