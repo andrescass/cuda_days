@@ -19,6 +19,8 @@ using namespace std;
 
 std::mutex mu;
 
+static const string APP_VERSION = "1.1.0";
+
 
 class dayClass
 {
@@ -45,6 +47,19 @@ public:
 	};
 
 };
+
+void showHelpMsg()
+{
+	cout << "version " << APP_VERSION << endl << endl;
+	cout << "Usage: daycomp.exe -i file1.csv file2.csv -o output -t [min/sec] " << endl << endl;
+	cout << "\t -i input csv files' names. \t If it is only one, one file mode is selected," << endl;
+	cout << "\t \t If ther are more than one files, multifile mode is selected." << endl;
+	cout << "\t -o outputs file name base. If no name is introduced, outputs files will be named output_low.xlsx and output_high.xlsx" << endl;
+	cout << "\t -t type of processing. Options are min for minute comparing and sec for seconds comparing." << endl;
+	cout << "\t \t if none is selected, software will try to determine by itself" << endl << endl;
+
+	return;
+}
 
 std::vector<std::string> split(const std::string &s, char delim) {
 	std::vector<std::string> result;
@@ -97,6 +112,83 @@ void parseVector(dayClass day)
 	outLowFile.close();
 	outHighFile.close();
 	cout << "file " << outLowFileName << endl;
+}
+
+void parseVectorDel(dayClass day, char delimiter)
+{
+	ofstream outLowFile;
+	ofstream outHighFile;
+	string outLowFileName = split(day.day, delimiter)[1];
+	string outHighFileName = split(day.day, delimiter)[1];
+	outLowFileName.append("_").append(split(day.day, delimiter)[2]).append("low").append(".csv");
+	outHighFileName.append("_").append(split(day.day, delimiter)[2]).append("high").append(".csv");
+	outLowFile.open(outLowFileName);
+	outHighFile.open(outHighFileName);
+	outLowFile << fixed;
+	outHighFile << fixed;
+	outLowFile << "Input,Low\n";
+	outHighFile << "Input,High\n";
+	for (int i = 0; i < (day.hour.size() - 1); i++)
+	{
+		for (int j = (i + 1); j < day.hour.size(); j++)
+		{
+			outLowFile << day.hour[i] << "-" << day.hour[j] << "," << setprecision(2) << day.low[i] - day.low[j] << "\n";
+			outHighFile << day.hour[i] << "-" << day.hour[j] << "," << setprecision(2) << day.high[i] - day.high[j] << "\n";
+		}
+
+	}
+	outLowFile.close();
+	outHighFile.close();
+	mu.lock();
+	cout << "file " << outLowFileName << endl;
+	mu.unlock();
+}
+
+void parseOneFile(string fileName)
+{
+	vector<dayClass> oneDay;
+	CSVFormat format;
+	format.delimiter(',');
+	format.variable_columns(false); // Short-hand
+	//format.variable_columns(VariableColumnPolicy::IGNORE);
+	try
+	{
+		CSVReader reader(fileName, format);
+		std::cout << "file readed \n";
+
+		CSVRow row;
+		std::string currentDay = "";
+		std::vector< std::string> parsStamp;
+		int dayIdx = 0;
+
+		for (CSVRow& row : reader)
+		{
+			if (row[" Open Price"].get<string>().compare(" None") != 0)
+			{
+				parsStamp = split(row[" Time"].get<string>(), 'T');
+				if (parsStamp[0].compare(currentDay) != 0) // nuevo día
+				{
+					currentDay = parsStamp[0];
+					oneDay.push_back(dayClass(parsStamp[0]));
+					dayIdx++;
+					cout << currentDay << endl;
+				}
+				oneDay[dayIdx - 1].dayPushback(parsStamp[1], atof(row[" Open Price"].get().c_str())
+					, atof(row[" High Price"].get().c_str())
+					, atof(row[" Low Price"].get().c_str())
+					, atof(row[" Close Price"].get().c_str()));
+				
+			}
+		}
+	}
+	catch (const char* e)
+	{
+		cout << e;
+		exit(1);
+	}
+	for(dayClass& d : oneDay)
+		parseVectorDel(d, '-');
+
 }
 
 void writeOutputFile(vector<dayClass> days, string low_high, vector<string> dates)
@@ -218,27 +310,60 @@ void writeOutputFile(vector<dayClass> days, string low_high, vector<string> date
 	else        cout << "Saving the book " << resultFileName << " has been failed\n";
 }
 
-vector<string> createDateVector()
+vector<string> createDateVector(bool type)
 {
 	stringstream currDate;
 	vector<string> result;
-	for (int i = 0; i < 24; i++)
+	if (!type) // min type
 	{
-		for (int j = 0; j < 60; j++)
+		for (int i = 0; i < 24; i++)
 		{
-			if (i < 10)
+			for (int j = 0; j < 60; j++)
 			{
-				currDate << "0";
+				if (i < 10)
+				{
+					currDate << "0";
 
+				}
+				currDate << i << ":";
+				if (j < 10)
+				{
+					currDate << "0";
+				}
+				currDate << j << ":00";
+				result.push_back(currDate.str());
+				stringstream().swap(currDate);
 			}
-			currDate << i << ":";
-			if (j < 10)
+		}
+	}
+	else // sec type
+	{
+		for (int i = 0; i < 24; i++)
+		{
+			for (int j = 0; j < 60; j++)
 			{
-				currDate << "0";
+				for (int k = 0; k < 60; k++)
+				{
+					if (i < 10)
+					{
+						currDate << "0";
+
+					}
+					currDate << i << ":";
+					if (j < 10)
+					{
+						currDate << "0";
+					}
+					currDate << j;
+					if (k < 10)
+					{
+						currDate << "0";
+					}
+					currDate << k << ":00";
+					result.push_back(currDate.str());
+					stringstream().swap(currDate);
+				}
 			}
-			currDate << j << ":00";
-			result.push_back(currDate.str());
-			stringstream().swap(currDate);
 		}
 	}
 
@@ -248,74 +373,180 @@ vector<string> createDateVector()
 int main(int argc, char **argv)
 {
 	std::vector<dayClass> days;
-	vector<string> dates = createDateVector();
-	
-    std::cout << "Start processing\n"; 
-
+	vector<string> inputFileNames;
 	string inputFileName;
+	string outputFilenameBase = "output";
+	bool minOrSec = false; // false for min, tru for sec
+	int argCounter = 0;
+
+	// Argument parsing
 	if (argc > 1)
 	{
-		inputFileName = argv[1];
+		for (int argi = 1; argi < argc; argi++)
+		{
+			if (strcmp(argv[argi], "-i") == 0)
+			{
+				// input files
+				argi++;
+				if ((argi < argc) && (argv[argi][0] != '-'))
+				{
+					while ((argi < argc) && (argv[argi][0] != '-'))
+					{
+						inputFileNames.push_back(argv[argi]);
+						argi++;
+					}
+
+					if (argi < argc)
+					{
+						argi--;
+					}
+				}
+				else
+				{
+					cout << "Error in input file name. Use -h for help" << endl;
+					return 0;
+				}
+			}
+			else if (strcmp(argv[argi], "-o") == 0)
+			{
+				argi++;
+				if ((argi < argc) && (argv[argi][0] != '-'))
+				{
+					outputFilenameBase = argv[argi];
+				}
+				else
+				{
+					cout << "Error in output file name. Use -h for help" << endl;
+					return 0;
+				}
+			}
+			else if (strcmp(argv[argi], "-t") == 0)
+			{
+				argi++;
+				if ((argi < argc))
+				{
+					if (strcmp(argv[argi], "min") == 0)
+						minOrSec = false;
+					else if (strcmp(argv[argi], "sec") == 0)
+						minOrSec = true;
+					else
+					{
+						cout << "Error in type. Use -h for help" << endl;
+						return 0;
+					}
+
+				}
+				else
+				{
+					cout << "Error in type. Use -h for help" << endl;
+					return 0;
+				}
+			}
+			else if (strcmp(argv[argi], "-h") == 0)
+			{
+				showHelpMsg();
+				return 0;
+			}
+		}
 	}
 	else
 	{
-		inputFileName = "./the super boring stuf1.csv";
+		//inputFileName = "./the super boring stuf1.csv";
+		showHelpMsg();
+		return 0;
 	}
 
-	CSVFormat format;
-	format.delimiter(',');
-	format.variable_columns(false); // Short-hand
-	//format.variable_columns(VariableColumnPolicy::IGNORE);
-	try
+	if (inputFileNames.size() == 0)
 	{
-		CSVReader reader(inputFileName, format);
-		cout << "file readed \n";
-	
-		CSVRow row;
-		std::string currentDay = "";
-		std::vector< std::string> parsStamp;
-		int dayIdx = 0;
+		cout << "There must be entered at least one input file name" << endl;
+		cout << "Use -h for help" << endl;
+		return 0;
+	}
 
-		for (CSVRow& row : reader)
+	vector<string> dates = createDateVector(minOrSec);
+
+	std::cout << "Start processing\n";
+
+	// One file process
+	if (inputFileNames.size() == 1)
+	{
+		CSVFormat format;
+		format.delimiter(',');
+		format.variable_columns(false); // Short-hand
+		//format.variable_columns(VariableColumnPolicy::IGNORE);
+		try
 		{
-			parsStamp = split(row["Timestamp"].get<string>(), '-');
-			if (parsStamp[0].compare(currentDay) != 0) // nuevo día
-			{
-				currentDay = parsStamp[0];
-				days.push_back(dayClass(parsStamp[0]));
-				dayIdx++;
-				cout << currentDay << endl;
-			}
-			days[dayIdx - 1].dayPushback(parsStamp[1], atof(row["Open"].get().c_str()), atof(row["High"].get().c_str()), atof(row["Low"].get().c_str())
-				, atof(row["Close"].get().c_str()));
-		}
+			CSVReader reader(inputFileName, format);
+			cout << "file readed \n";
 
-		// all parsed, now compare
+			CSVRow row;
+			std::string currentDay = "";
+			std::vector< std::string> parsStamp;
+			int dayIdx = 0;
+
+			for (CSVRow& row : reader)
+			{
+				parsStamp = split(row["Timestamp"].get<string>(), '-');
+				if (parsStamp[0].compare(currentDay) != 0) // nuevo día
+				{
+					currentDay = parsStamp[0];
+					days.push_back(dayClass(parsStamp[0]));
+					dayIdx++;
+					cout << currentDay << endl;
+				}
+				days[dayIdx - 1].dayPushback(parsStamp[1], atof(row["Open"].get().c_str()), atof(row["High"].get().c_str()), atof(row["Low"].get().c_str())
+					, atof(row["Close"].get().c_str()));
+			}
+
+			// all parsed, now compare
+			std::vector<std::thread> t_threads;
+
+			for (dayClass& day : days)
+			{
+				t_threads.push_back(std::thread(parseVector, day));
+			}
+
+			for (std::thread& t : t_threads)
+			{
+				t.join();
+			}
+			std::cout << "\n created " << dayIdx << " set of files \n";
+
+			// Result file. One thread per file
+			thread lowTh(writeOutputFile, days, "low", dates);
+			thread HighTh(writeOutputFile, days, "high", dates);
+
+			lowTh.join();
+			HighTh.join();
+
+		}
+		catch (const char* e)
+		{
+			cout << e;
+			return 1;
+		}
+	}
+	else //multi file 
+	{
+		// Parse and process each file
 		std::vector<std::thread> t_threads;
 
-		for (dayClass& day : days)
+		for (string& filen : inputFileNames)
 		{
-			t_threads.push_back(std::thread(parseVector, day));
+			t_threads.push_back(std::thread(parseOneFile, filen));
 		}
 
 		for (std::thread& t : t_threads)
 		{
 			t.join();
 		}
-		std::cout << "\n created "<< dayIdx << " set of files \n";
 
 		// Result file. One thread per file
 		thread lowTh(writeOutputFile, days, "low", dates);
 		thread HighTh(writeOutputFile, days, "high", dates);
 
 		lowTh.join();
-		HighTh.join();	
-
-	}
-	catch (const char* e)
-	{
-		cout << e;
-		return 1;
+		HighTh.join();
 	}
 
 
