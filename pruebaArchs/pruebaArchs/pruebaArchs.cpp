@@ -268,13 +268,15 @@ void writeOutputFile(vector<dayClass> days, string low_high, vector<string> date
 
 	string cmpStr;
 	string outStr;
+	int count;
 	for (long int i = 0; i < dates.size() - 1; i++)
 	{
 		for (long int j = i + 1; j < dates.size(); j++)
 		{
 			cmpStr = dates[i];
 			cmpStr.append("-").append(dates[j]);
-			outStr = cmpStr;
+			//outStr = cmpStr;
+			count = 0;
 			//sheet.BeginRow();
 			//auxCell.value = cmpStr;
 			//sheet.AddCell(auxCell);
@@ -284,14 +286,15 @@ void writeOutputFile(vector<dayClass> days, string low_high, vector<string> date
 				{
 					if (cmpStr.compare(split(lines[k], ',')[0]) == 0) // file has the date
 					{
-						saveLine = true;
+						//saveLine = true;
 						/*if ((isHigh && (atof(split(lines[k], ',')[1].c_str()) > -4)) ||
 							(!isHigh && (atof(split(lines[k], ',')[1].c_str()) < 4)))
 							saveFilterLine = true;*/
 						//auxDouCell.value = atof(split(lines[k], ',')[1].c_str());
 						//sheet.AddCell(auxDouCell);
 						//cout << cmpStr << endl;
-						outStr.append(",").append(split(lines[k], ',')[1]);
+						//outStr.append(",").append(split(lines[k], ',')[1]);
+						count++;
 						if (getline(readers[k], dummyStr))
 						{
 							lines[k] = dummyStr;
@@ -301,25 +304,27 @@ void writeOutputFile(vector<dayClass> days, string low_high, vector<string> date
 							readSt[k] = 0;
 						}
 					}
-					else // file not have the date
+					/*else // file not have the date
 					{
 						outStr.append(",").append(" ");
-					}
+					}*/
 				}
 			}
 			//sheet.EndRow(); //row ended
-			outStr.append("\n");
-			if (saveLine)
+			//outStr.append("\n");
+			if(count > 0) //(saveLine)
 			{
-				outFile << outStr;
-				saveLine = false;
+				//outStr.append("\n");
+				outFile << cmpStr << "," << count << "\n";
+				//saveLine = false;
+				count = 0;
 			}
 			/*if (saveFilterLine)
 			{
 				outFilterFile << outStr;
 				saveFilterLine = false;
 			}*/
-			outStr = "";
+			//outStr = "";
 		}
 
 
@@ -472,6 +477,9 @@ int main(int argc, char **argv)
 	int argCounter = 0;
 	time_t t = time(NULL);
 	struct tm *startT = gmtime(&t);
+	int stH = startT->tm_hour;
+	int stM = startT->tm_min;
+	int stS = startT->tm_sec;
 	struct tm *endT;
 
 	// Argument parsing
@@ -694,16 +702,16 @@ int main(int argc, char **argv)
 		}
 		//std::cout << "\n created " << dayIdx << " set of files \n";
 
-		/*vector<string> dates = createDateVector(true);
+		vector<string> dates = createDateVector(true);
 
 		thread lowTh(writeOutputFile, oneDay, "low", dates);
 		thread HighTh(writeOutputFile, oneDay, "high", dates);
 
 		lowTh.join();
-		HighTh.join();*/
+		HighTh.join();
 
 		endT = gmtime(&t);
-		std::cout << "Start processing at " << startT->tm_hour << ":" << startT->tm_min << ":" << startT->tm_sec << endl;
+		std::cout << "Start processing at " << stH << ":" << stM << ":" << stS << endl;
 		std::cout << "End processing at " << endT->tm_hour << ":" << endT->tm_min << ":" << endT->tm_sec << endl;
 		// Parse and process each file
 		/*std::vector<std::thread> t_threads;
