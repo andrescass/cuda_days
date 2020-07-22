@@ -10,6 +10,8 @@
 #include <mutex>
 #include <vector>
 #include <sstream>
+#include <time.h>
+
 //#include "Workbook.h"
 
 
@@ -462,12 +464,15 @@ void parseOneFile(string fileName)
 
 int main(int argc, char **argv)
 {
-	std::vector<dayClass> days;
+	//std::vector<dayClass> days;
 	vector<string> inputFileNames;
 	string inputFileName;
 	string outputFilenameBase = "output";
 	bool minOrSec = true; // false for min, tru for sec
 	int argCounter = 0;
+	time_t t = time(NULL);
+	struct tm *startT = gmtime(&t);
+	struct tm *endT;
 
 	// Argument parsing
 	if (argc > 1)
@@ -553,9 +558,9 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
-	vector<string> dates = createDateVector(minOrSec);
+	//vector<string> dates = createDateVector(minOrSec);
 
-	std::cout << "Start processing\n";
+	std::cout << "Start processing at " << startT->tm_hour << ":" << startT->tm_min << ":" << startT->tm_sec << endl;
 
 	// One file process
 	/*if (inputFileNames.size() == 1)
@@ -618,8 +623,90 @@ int main(int argc, char **argv)
 	}
 	else //multi file */
 	{
-		// Parse and process each file
+		vector<dayClass> oneDay;
+
+		CSVFormat format;
+		format.delimiter(',');
+		format.variable_columns(false); // Short-hand
+		int dayIdx = 0;
+		//format.trim({ ' ', '\t' });
+		//format.variable_columns(VariableColumnPolicy::IGNORE);
+		for (string& filen : inputFileNames)
+		{
+			try
+			{
+				CSVReader reader(filen, format);
+				
+
+				CSVRow row;
+				std::string currentDay = "";
+				std::vector< std::string> parsStamp;
+				
+
+				for (CSVRow& row : reader)
+				{
+					if (row[" Open Price"].is_num())//(row[" Open Price"].get<string>().compare(" None") != 0) //
+					{
+						parsStamp = split(row[" Time"].get<string>(), 'T');
+						if (parsStamp[0].compare(currentDay) != 0) // nuevo día
+						{
+							currentDay = parsStamp[0];
+							oneDay.push_back(dayClass(parsStamp[0]));
+							dayIdx++;
+						}
+						oneDay[dayIdx - 1].dayPushback(parsStamp[1], atof(row[" Open Price"].get().c_str())
+							, atof(row[" High Price"].get().c_str())
+							, atof(row[" Low Price"].get().c_str())
+							, atof(row[" Close Price"].get().c_str()));
+
+					}
+				}
+
+				std::cout << filen << " file readed \n";
+
+				// all parsed, now compare
+				/*for (dayClass& d : oneDay)
+					parseVectorDel(d, '-');*/
+				
+			}
+			catch (const char* e)
+			{
+				cout << "File error " << filen << e;
+				exit(1);
+			}
+			//dayIdx++;
+		}
+		cout << "loaded " << endl;
+		for (dayClass& d : oneDay)
+		{
+			cout << d.day << " with " << d.hour.size() << " entries " << endl;
+		}
 		std::vector<std::thread> t_threads;
+
+		for (dayClass& day : oneDay)
+		{
+			t_threads.push_back(std::thread(parseVectorDel, day, '-'));
+		}
+
+		for (std::thread& t : t_threads)
+		{
+			t.join();
+		}
+		//std::cout << "\n created " << dayIdx << " set of files \n";
+
+		/*vector<string> dates = createDateVector(true);
+
+		thread lowTh(writeOutputFile, oneDay, "low", dates);
+		thread HighTh(writeOutputFile, oneDay, "high", dates);
+
+		lowTh.join();
+		HighTh.join();*/
+
+		endT = gmtime(&t);
+		std::cout << "Start processing at " << startT->tm_hour << ":" << startT->tm_min << ":" << startT->tm_sec << endl;
+		std::cout << "End processing at " << endT->tm_hour << ":" << endT->tm_min << ":" << endT->tm_sec << endl;
+		// Parse and process each file
+		/*std::vector<std::thread> t_threads;
 
 		for (string& filen : inputFileNames)
 		{
@@ -629,7 +716,7 @@ int main(int argc, char **argv)
 		for (std::thread& t : t_threads)
 		{
 			t.join();
-		}
+		}*/
 
 		// Result file. One thread per file
 		/*thread lowTh(writeOutputFile, days, "low", dates);
