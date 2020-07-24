@@ -29,6 +29,9 @@ static const string DB_FILEL_NAME = "daysl.sqlite";
 ofstream outHFile;
 ofstream outLFile;
 
+sqlite3 *maindbh;
+sqlite3 *maindbl;
+
 static int nullCallback(void *data, int argc, char **argv, char **azColName) {
 	
 	return 0;
@@ -58,6 +61,40 @@ static int callbackL(void *data, int argc, char **argv, char **azColName) {
 			outLFile << ',';//otf << ',';
 	}
 	outLFile << "\n";
+
+	return 0;
+}
+
+static int final_callback_low(void *data, int argc, char **argv, char **azColName) {
+	/*int i;
+	fprintf(stderr, "%s: ", (const char*)data);*/
+	string sql = "INSERT INTO LOW (day) VALUES '";
+	sql.append(argv[0]);
+	sql.append("');");
+	sqlite3_exec(maindbl, sql.c_str(), NULL, NULL, NULL);
+	/*for (int i = 0; i < argc; i++) {
+		outHFile << argv[i];
+		if (i == 0)
+			outHFile << ',';//otf << ',';
+	}
+	outHFile << "\n";*/
+
+	return 0;
+}
+
+static int final_callback_high(void *data, int argc, char **argv, char **azColName) {
+	/*int i;
+	fprintf(stderr, "%s: ", (const char*)data);*/
+	string sql = "INSERT INTO HIGH (day) VALUES '";
+	sql.append(argv[0]);
+	sql.append("');");
+	sqlite3_exec(maindbh, sql.c_str(), NULL, NULL, NULL);
+	/*for (int i = 0; i < argc; i++) {
+		outHFile << argv[i];
+		if (i == 0)
+			outHFile << ',';//otf << ',';
+	}
+	outHFile << "\n";*/
 
 	return 0;
 }
@@ -483,18 +520,50 @@ void parseVectorDel(dayClass day, char delimiter)
 	mu.unlock();
 }
 
-void parseVectorDB(dayClass day, char delimiter)
+void parseVectorDB(dayClass day, char delimiter, sqlite3* auxdbh, sqlite3 *auxdbl)
 {
-	sqlite3 *auxdbh;
-	sqlite3 *auxdbl;
-	char *ErrMsg = 0;
+	//sqlite3 *auxdbh;
+	//sqlite3 *auxdbl;
+	char *zErrMsg = 0;
 	int rc;
 	stringstream sql;
 	string sqlS;
 	const char* data = "Callback function called";
 
-	sqlite3_open_v2(DB_FILEH_NAME.c_str(), &auxdbh, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX, NULL);
-	sqlite3_open_v2(DB_FILEL_NAME.c_str(), &auxdbl, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX, NULL);
+	//sqlite3_open_v2(DB_FILEH_NAME.c_str(), &auxdbh, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX, NULL);
+	//sqlite3_open_v2(DB_FILEL_NAME.c_str(), &auxdbl, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX, NULL);
+	// Delete tables if exists and create again
+	sql << "DROP TABLE HIGH;";
+	rc = sqlite3_exec(auxdbh, sql.str().c_str(), nullCallback, (void*)data, &zErrMsg);
+	stringstream().swap(sql);
+	sql << "DROP TABLE LOW;";
+	rc = sqlite3_exec(auxdbl, sql.str().c_str(), nullCallback, (void*)data, &zErrMsg);
+	stringstream().swap(sql);
+
+	sql << "CREATE TABLE IF NOT EXISTS HIGH (" <<
+		"id INTEGER PRIMARY KEY," <<
+		"day TEXT);";
+	rc = sqlite3_exec(auxdbh, sql.str().c_str(), nullCallback, (void*)data, &zErrMsg);
+	stringstream().swap(sql);
+	if (rc)
+		cout << "Error creating table " << sqlite3_errmsg(maindbh);
+
+	sql << "CREATE TABLE IF NOT EXISTS LOW (" <<
+		"id INTEGER PRIMARY KEY," <<
+		"day TEXT);";
+	rc = sqlite3_exec(auxdbl, sql.str().c_str(), nullCallback, (void*)data, &zErrMsg);
+	stringstream().swap(sql);
+	if (rc)
+		cout << "Error creating table " << sqlite3_errmsg(maindbl);
+
+	if (!rc)
+	{
+		cout << "Tables created" << endl;
+	}
+
+	sqlite3_exec(auxdbl, "PRAGMA synchronous = OFF", NULL, NULL, &zErrMsg);
+	sqlite3_exec(auxdbh, "PRAGMA synchronous = OFF", NULL, NULL, &zErrMsg);
+
 
 	float lowF;
 	float highF;
@@ -502,6 +571,14 @@ void parseVectorDB(dayClass day, char delimiter)
 	vector<string> lowDays;
 	vector<string> highDays;
 	string pS;
+	sqlite3_stmt *stmth;
+	sqlite3_stmt *stmtl;
+
+	sqlite3_prepare_v2(auxdbh, "INSERT INTO HIGH (day) VALUES (@d)", -1, &stmth, 0);
+	sqlite3_prepare_v2(auxdbl, "INSERT INTO LOW (day) VALUES (@d)", -1, &stmtl, 0);
+
+	sqlite3_exec(auxdbl, "BEGIN TRANSACTION;", NULL, NULL, NULL);
+	sqlite3_exec(auxdbh, "BEGIN TRANSACTION;", NULL, NULL, NULL);
 	for (int i = 0; i < (day.hour.size() - 1); i++)
 	{
 		for (int j = (i + 1); j < day.hour.size(); j++)
@@ -523,26 +600,30 @@ void parseVectorDB(dayClass day, char delimiter)
 		}
 		//if (lowDays.size() > 100000)
 		{
-			mu.lock();
-			sqlite3_exec(auxdbl, "BEGIN TRANSACTION;", NULL, NULL, NULL);
+			//mu.lock();
+			
 			for (auto& d : lowDays)
 			{
 				
-				sql << "INSERT INTO LOW (day) VALUES ('" << d << "');";
+				//sql << "INSERT INTO LOW (day) VALUES ('" << d << "');";
 				//cout << sql.str() << endl;
-				rc = sqlite3_exec(auxdbl, sql.str().c_str(), nullCallback, 0, &ErrMsg);
-				stringstream().swap(sql);
+				//rc = sqlite3_exec(auxdbl, sql.str().c_str(), nullCallback, 0, &zErrMsg);
+				//stringstream().swap(sql);
+				sqlite3_bind_text(stmtl, 1, d.c_str(), -1, SQLITE_TRANSIENT);
+				sqlite3_step(stmtl);
+				sqlite3_clear_bindings(stmtl);
+				sqlite3_reset(stmtl);
 				if (rc)
 				{
-					cout << "Error inserting " << ErrMsg << " " << day.day[i] << endl;
+					cout << "Error inserting " << zErrMsg << " " << day.day[i] << endl;
 				}
 				else
 				{
 					//cout << "commited " << d << endl;
 				}
 			}
-			sqlite3_exec(auxdbl, "END TRANSACTION;", NULL, NULL, NULL);
-			mu.unlock();
+			
+			//mu.unlock();
 			//sqlite3_exec(auxdb, "END TRANSACTION;", NULL, NULL, NULL);
 			lowDays.clear();
 		}
@@ -550,22 +631,28 @@ void parseVectorDB(dayClass day, char delimiter)
 		//if (highDays.size() > 100000)
 		{
 			//sqlite3_exec(auxdb, "BEGIN TRANSACTION;", NULL, NULL, NULL);
-			mu.lock();
-			sqlite3_exec(auxdbh, "BEGIN TRANSACTION;", NULL, NULL, NULL);
+			//mu.lock();
+			
 			for (auto& d : highDays)
 			{
-				sql << "INSERT INTO HIGH (day) VALUES ('" << d << "');";
+				//sql << "INSERT INTO HIGH (day) VALUES ('" << d << "');";
 				//cout << sql.str() << endl;
-				rc = sqlite3_exec(auxdbh, sql.str().c_str(), nullCallback, 0, &ErrMsg);
-				stringstream().swap(sql);
+				//rc = sqlite3_exec(auxdbh, sql.str().c_str(), nullCallback, 0, &zErrMsg);
+				//stringstream().swap(sql);
+				sqlite3_bind_text(stmth, 1, d.c_str(), -1, SQLITE_TRANSIENT);
+				sqlite3_step(stmth);
+				sqlite3_clear_bindings(stmth);
+				sqlite3_reset(stmth);
 			}
-			sqlite3_exec(auxdbh, "END TRANSACTION;", NULL, NULL, NULL);
-			mu.unlock();
+			
+			//mu.unlock();
 			highDays.clear();
 		}
 		if(i%60 == 0)
 			cout << day.hour[i] << endl;
 	}
+	sqlite3_exec(auxdbl, "END TRANSACTION;", NULL, NULL, NULL);
+	sqlite3_exec(auxdbh, "END TRANSACTION;", NULL, NULL, NULL);
 	/*sqlite3_exec(auxdb, "BEGIN TRANSACTION;", NULL, NULL, NULL);
 	for (auto& d : lowDays)
 	{
@@ -709,6 +796,85 @@ void parseOneFile(string fileName)
 
 }
 
+void writeOutputLow(vector<string> lnames)
+{
+	char *ErrMsg = 0;
+	int rc;
+	string sq;
+
+	/*for (auto& ldb : ldbs)
+	{
+		sqlite3_exec(ldb, "BEGIN TRANSACTION;", NULL, NULL, NULL);
+		sqlite3_exec(ldb, "SELECT* FROM day", final_callback_low, NULL, NULL);
+		sqlite3_exec(ldb, "END TRANSACTION;", NULL, NULL, NULL);
+	}*/
+	// Attach first db
+	for (auto& n : lnames)
+	{
+		cout << n << endl;
+		sq = "ATTACH DATABASE '";
+		sq.append(n).append("' as data2;");
+		rc = sqlite3_exec(maindbl, sq.c_str(), NULL, NULL, &ErrMsg);
+		if (rc)
+			cout << ErrMsg << endl;
+
+		sqlite3_exec(maindbl, "BEGIN TRANSACTION;", NULL, NULL, NULL);
+		rc = sqlite3_exec(maindbl, "INSERT INTO LOW SELECT * FROM data2.LOW", NULL, NULL, NULL);
+		if (rc)
+			cout << ErrMsg << endl;
+		sqlite3_exec(maindbl, "END TRANSACTION;", NULL, NULL, NULL);
+
+		rc = sqlite3_exec(maindbl, "DETACH DATABASE data2", NULL, NULL, &ErrMsg);
+		if (rc)
+			cout << ErrMsg << endl;
+	}
+
+	rc = sqlite3_exec(maindbl, "SELECT day, COUNT(*) FROM LOW GROUP BY day", callbackL, NULL, &ErrMsg);
+	if (rc)
+	{
+		cout << ErrMsg << endl;
+	}
+}
+
+void writeOutputHigh(vector<string> hnames)
+{
+	char *ErrMsg = 0;
+	int rc;
+	string sq;
+
+	/*for (auto& hdb : hdbs)
+	{
+		sqlite3_exec(hdb, "BEGIN TRANSACTION;", NULL, NULL, NULL);
+		sqlite3_exec(hdb, "SELECT* FROM day", final_callback_high, NULL, NULL);
+		sqlite3_exec(hdb, "END TRANSACTION;", NULL, NULL, NULL);
+	}*/
+
+	for (auto& n : hnames)
+	{
+		sq = "ATTACH DATABASE '";
+		sq.append(n).append("' as data2;");
+		rc = sqlite3_exec(maindbh, sq.c_str(), NULL, NULL, &ErrMsg);
+		if (rc)
+			cout << ErrMsg << endl;
+
+		sqlite3_exec(maindbh, "BEGIN TRANSACTION;", NULL, NULL, NULL);
+		rc = sqlite3_exec(maindbh, "INSERT INTO HIGH SELECT * FROM data2.HIGH", NULL, NULL, NULL);
+		if (rc)
+			cout << ErrMsg << endl;
+		sqlite3_exec(maindbh, "END TRANSACTION;", NULL, NULL, NULL);
+
+		rc = sqlite3_exec(maindbh, "DETACH DATABASE data2", NULL, NULL, &ErrMsg);
+		if (rc)
+			cout << ErrMsg << endl;
+	}
+
+	rc = sqlite3_exec(maindbh, "SELECT day, COUNT(*) FROM HIGH GROUP BY day", callbackH, NULL, &ErrMsg);
+	if (rc)
+	{
+		cout << ErrMsg << endl;
+	}
+}
+
 int main(int argc, char **argv)
 {
 
@@ -724,8 +890,10 @@ int main(int argc, char **argv)
 	int stM = startT->tm_min;
 	int stS = startT->tm_sec;
 	struct tm *endT;
-	sqlite3 *maindbh;
-	sqlite3 *maindbl;
+	//sqlite3 *maindbh;
+	//sqlite3 *maindbl;
+	vector<sqlite3*> hdbs;
+	vector<sqlite3*> ldbs;
 	int rc;
 	stringstream sq;
 	char *zErrMsg = 0;
@@ -768,8 +936,9 @@ int main(int argc, char **argv)
 		cout << "Tables created" << endl;
 	}
 
-	sqlite3_close_v2(maindbh);
-	sqlite3_close_v2(maindbl);
+	//sqlite3_close_v2(maindbh);
+	//sqlite3_close_v2(maindbl);
+
 
 	// output files visible for all
 	remove("outputHigh.csv");
@@ -984,11 +1153,32 @@ int main(int argc, char **argv)
 		{
 			cout << d.day << " with " << d.hour.size() << " entries " << endl;
 		}
+
+		vector<string> ldbNames;
+		vector<string> hdbNames;
+		// Initialize databases
+		for (auto& d : oneDay)
+		{
+			sqlite3* auxdbl;
+			sqlite3* auxdbh;
+			string dbname = d.day;
+			dbname.append("_l.sqlite");
+			ldbNames.push_back(dbname);
+			sqlite3_open_v2(dbname.c_str(), &auxdbl, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX, NULL);
+			ldbs.push_back(auxdbl);
+			dbname = d.day;
+			dbname.append("_h.sqlite");
+			hdbNames.push_back(dbname);
+			sqlite3_open_v2(dbname.c_str(), &auxdbh, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX, NULL);
+			hdbs.push_back(auxdbh);
+		}
+
+
 		std::vector<std::thread> t_threads;
 
-		for (dayClass& day : oneDay)
+		for (int di = 0; di < oneDay.size(); di++)
 		{
-			t_threads.push_back(std::thread(parseVectorDB, day, '-'));
+			t_threads.push_back(std::thread(parseVectorDB, oneDay[di], '-', hdbs[di], ldbs[di]));
 		}
 
 		for (std::thread& t : t_threads)
@@ -996,6 +1186,10 @@ int main(int argc, char **argv)
 			t.join();
 		}
 
+		for (auto& d : ldbs)
+		{
+			sqlite3_close(d);
+		}
 
 		/*for (dayClass& day : oneDay)
 		{
@@ -1009,12 +1203,17 @@ int main(int argc, char **argv)
 		//std::cout << "\n created " << dayIdx << " set of files \n";
 
 		vector<string> dates = createDateVector(true);
-
-		thread lowTh(writeOutputFileLow, oneDay, dates);
-		thread HighTh(writeOutputFileHigh, oneDay, dates);
+		thread lowTh(writeOutputHigh, hdbNames);
+		thread HighTh(writeOutputLow, ldbNames);
 
 		lowTh.join();
 		HighTh.join();
+
+		/*thread lowTh(writeOutputFileLow, oneDay, dates);
+		thread HighTh(writeOutputFileHigh, oneDay, dates);
+
+		lowTh.join();
+		HighTh.join();*/
 
 		time_t te = time(NULL);
 		endT = gmtime(&te);
