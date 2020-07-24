@@ -11,6 +11,9 @@
 #include <vector>
 #include <sstream>
 #include <time.h>
+#include <exception>
+#include <typeinfo>
+#include <stdexcept>
 #include "sqlite3.h"
 
 //#include "Workbook.h"
@@ -825,11 +828,41 @@ void writeOutputLow(vector<string> lnames)
 
 		sqlite3_exec(maindbl, "BEGIN TRANSACTION;", NULL, NULL, NULL);
 		sq = "INSERT INTO LOW (day) SELECT day FROM ";
+		//sq = "INSERT INTO LOW (day) VALUE ('lala'); ";
+		sq.append(dbn.str()).append(".LOW WHERE true ");
+		sq.append("ON CONFLICT (day) DO UPDATE SET count=count+1;");
+		//sq.append("ON CONFLICT (day) DO UPDATE SET day='sa';");
+		cout << sq << endl;
+		try
+		{
+			rc = sqlite3_exec(maindbl, sq.c_str(), NULL, NULL, &ErrMsg);
+			if (rc)
+			{
+				cout << ErrMsg << endl;
+			}
+		}
+		catch (const std::runtime_error& re)
+		{
+			// speciffic handling for runtime_error
+			std::cerr << "Runtime error: " << re.what() << std::endl;
+		}
+		catch (const std::exception& ex)
+		{
+			// speciffic handling for all exceptions extending std::exception, except
+			// std::runtime_error which is handled explicitly
+			std::cerr << "Error occurred: " << ex.what() << std::endl;
+		}
+		catch (...)
+		{
+			// catch any other errors (that we have no information about)
+			std::cerr << "Unknown failure occurred. Possible memory corruption" << std::endl;
+		}
+		/*sq = "INSERT INTO LOW (day) SELECT day FROM ";
 		sq.append(dbn.str()).append(".LOW;");
 		//rc = sqlite3_exec(maindbl, "INSERT INTO LOW SELECT * FROM data2.LOW", NULL, NULL, NULL);
 		rc = sqlite3_exec(maindbl, sq.c_str(), NULL, NULL, NULL);
 		if (rc)
-			cout << ErrMsg << endl;
+			cout << ErrMsg << endl;*/
 		sqlite3_exec(maindbl, "END TRANSACTION;", NULL, NULL, NULL);
 
 		sq = "DETACH DATABASE ";
@@ -845,7 +878,7 @@ void writeOutputLow(vector<string> lnames)
 		remove(n.c_str());
 	}
 
-	rc = sqlite3_exec(maindbl, "SELECT day, COUNT(*) FROM LOW GROUP BY day", callbackL, NULL, &ErrMsg);
+	rc = sqlite3_exec(maindbl, "SELECT * FROM LOW GROUP BY day", callbackL, NULL, &ErrMsg);
 	if (rc)
 	{
 		cout << ErrMsg << endl;
@@ -884,7 +917,8 @@ void writeOutputHigh(vector<string> hnames)
 
 		sqlite3_exec(maindbh, "BEGIN TRANSACTION;", NULL, NULL, NULL);
 		sq = "INSERT INTO HIGH (day) SELECT day FROM ";
-		sq.append(dbn.str()).append(".HIGH;");
+		sq.append(dbn.str()).append(".HIGH WHERE true ");
+		sq.append("ON CONFLICT (day) DO UPDATE SET count=count+1;");
 		//rc = sqlite3_exec(maindbl, "INSERT INTO LOW SELECT * FROM data2.LOW", NULL, NULL, NULL);
 		rc = sqlite3_exec(maindbh, sq.c_str(), NULL, NULL, NULL);
 		if (rc)
@@ -904,7 +938,7 @@ void writeOutputHigh(vector<string> hnames)
 		remove(n.c_str());
 	}
 
-	rc = sqlite3_exec(maindbh, "SELECT day, COUNT(*) FROM HIGH GROUP BY day", callbackH, NULL, &ErrMsg);
+	rc = sqlite3_exec(maindbh, "SELECT * FROM HIGH GROUP BY day", callbackH, NULL, &ErrMsg);
 	if (rc)
 	{
 		cout << ErrMsg << endl;
@@ -954,16 +988,16 @@ int main(int argc, char **argv)
 	stringstream().swap(sq);
 
 	sq << "CREATE TABLE IF NOT EXISTS HIGH (" <<
-		"id INTEGER PRIMARY KEY," <<
-		"day TEXT);";
+		//"id INTEGER PRIMARY KEY," <<
+		"day TEXT UNIQUE, count INT DEFAULT 1);";
 	rc = sqlite3_exec(maindbh, sq.str().c_str(), nullCallback, (void*)data, &zErrMsg);
 	stringstream().swap(sq);
 	if (rc)
 		cout << "Error creating table " << sqlite3_errmsg(maindbh);
 
 	sq << "CREATE TABLE IF NOT EXISTS LOW (" <<
-		"id INTEGER PRIMARY KEY," <<
-		"day TEXT);";
+		//"id INTEGER PRIMARY KEY, " <<
+		"day TEXT UNIQUE, count INT DEFAULT 1);";
 	rc = sqlite3_exec(maindbl, sq.str().c_str(), nullCallback, (void*)data, &zErrMsg);
 	stringstream().swap(sq);
 	if (rc)
@@ -1241,8 +1275,8 @@ int main(int argc, char **argv)
 		//std::cout << "\n created " << dayIdx << " set of files \n";
 
 		vector<string> dates = createDateVector(true);
-		thread lowTh(writeOutputHigh, hdbNames);
-		thread HighTh(writeOutputLow, ldbNames);
+		thread lowTh(writeOutputLow, ldbNames);
+		thread HighTh(writeOutputHigh, hdbNames);
 
 		lowTh.join();
 		HighTh.join();
